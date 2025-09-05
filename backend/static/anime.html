@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Manga Creator</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        
+        body {
+            background: #1a1a2e;
+        }
+        
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: url('https://i.gifer.com/7jKK.gif') center center / cover no-repeat;
+            opacity: 0.3;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.7);
+        }
+        
+        .form-container {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+        
+        button {
+            background: linear-gradient(to right, #e100ff, #7f00ff);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-background"></div>
+    
+    <div class="container">
+        <h1>Anime Manga Creator</h1>
+        
+        <div class="form-container">
+            <form id="mangaForm">
+                <label for="prompt">Story Prompt:</label>
+                <textarea id="prompt" rows="3" placeholder="Enter a brief description of your manga story..."></textarea>
+                
+                <label for="characters">Characters:</label>
+                <input type="text" id="characters" placeholder="Hero, Villain, Sidekick...">
+                
+                <div style="margin: 1rem 0; padding: 1rem; background: rgba(255, 69, 0, 0.2); border-radius: 5px; border: 1px solid #ff4500;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="unhinged" style="margin-right: 10px; width: auto;">
+                        <span style="color: #ff6b6b; font-weight: bold;">🔞 Unhinged Mode</span>
+                    </label>
+                    <p style="font-size: 0.9rem; color: #ffaa00; margin: 0.5rem 0 0 0;">⚠️ Warning: Generates mature, uncensored content with adult themes and language. Only enable if you're comfortable with explicit material.</p>
+                </div>
+                
+                <button type="submit">Generate Manga</button>
+            </form>
+        </div>
+        
+        <div id="loadingIndicator" style="display: none; text-align: center; margin: 20px 0;">
+            <p>Generating your manga... Please wait.</p>
+        </div>
+        
+        <div id="mangaOutput" style="margin-top: 30px;">
+            <!-- Generated manga will appear here -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('mangaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const prompt = document.getElementById('prompt').value;
+            const charactersInput = document.getElementById('characters').value;
+            const characters = charactersInput.split(',').map(char => char.trim());
+            const unhinged = document.getElementById('unhinged').checked;
+            
+            if (!prompt) {
+                alert('Please enter a story prompt');
+                return;
+            }
+            
+            // Show warning for unhinged content
+            if (unhinged && !confirm('⚠️ You have enabled Unhinged Mode. This will generate mature, uncensored content with adult themes and explicit language. Are you sure you want to continue?')) {
+                return;
+            }
+            
+            // Show loading indicator
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'block';
+            
+            const outputDiv = document.getElementById('mangaOutput');
+            outputDiv.innerHTML = '';
+            
+            try {
+                // Call the story generation API
+                const storyResponse = await fetch('/api/story/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        characters: characters,
+                        unhinged: unhinged
+                    })
+                });
+                
+                if (!storyResponse.ok) {
+                    throw new Error('Failed to generate story');
+                }
+                
+                const storyData = await storyResponse.json();
+                console.log('Story generated:', storyData);
+                
+                // Display the story
+                const storyDiv = document.createElement('div');
+                storyDiv.innerHTML = `
+                    <h2 style="color: #e100ff;">Your Manga Story</h2>
+                    <div style="background: rgba(0,0,0,0.6); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                        <h3>${storyData.title || prompt}</h3>
+                        <p>${storyData.summary || 'Your manga story has been generated!'}</p>
+                    </div>
+                    <h3 style="color: #7f00ff;">Scenes</h3>
+                `;
+                outputDiv.appendChild(storyDiv);
+                
+                // Generate panels for each scene
+                const scenes = storyData.scenes || [];
+                for (let i = 0; i < scenes.length; i++) {
+                    const scene = scenes[i];
+                    
+                    try {
+                        // Call the panel generation API
+                        const panelResponse = await fetch('/api/generate/panel', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                scene_description: scene.description || scene,
+                                dialogues: scene.dialogue || [],
+                                unhinged: unhinged
+                            })
+                        });
+                        
+                        if (!panelResponse.ok) {
+                            throw new Error('Failed to generate panel');
+                        }
+                        
+                        const panelData = await panelResponse.json();
+                        console.log('Panel generated:', panelData);
+                        
+                        // Create panel element
+                        const panelDiv = document.createElement('div');
+                        panelDiv.style.background = 'rgba(0,0,0,0.6)';
+                        panelDiv.style.padding = '15px';
+                        panelDiv.style.borderRadius = '10px';
+                        panelDiv.style.marginBottom = '20px';
+                        
+                        // Format dialogue properly
+                        let dialogueText = '';
+                        if (scene.dialogue && Array.isArray(scene.dialogue)) {
+                            dialogueText = scene.dialogue.map(d => `<strong>${d.character}:</strong> "${d.text}"`).join('<br>');
+                        }
+                        
+                        panelDiv.innerHTML = `
+                            <h4>Scene ${i+1}</h4>
+                            <p>${scene.description || scene}</p>
+                            <div style="margin: 15px 0;">
+                                <img src="${panelData.panel_path}" alt="Manga Panel ${i+1}" style="max-width: 100%; border-radius: 5px; box-shadow: 0 0 10px rgba(255,0,255,0.5);">
+                            </div>
+                            <div style="font-style: italic; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-top: 10px;">${dialogueText}</div>
+                        `;
+                        
+                        outputDiv.appendChild(panelDiv);
+                    } catch (error) {
+                        console.error('Error generating panel:', error);
+                        const errorDiv = document.createElement('div');
+                        errorDiv.innerHTML = `<p style="color: red;">Error generating panel for scene ${i+1}</p>`;
+                        outputDiv.appendChild(errorDiv);
+                    }
+                }
+                
+                // Add export button
+                const exportDiv = document.createElement('div');
+                exportDiv.style.textAlign = 'center';
+                exportDiv.style.marginTop = '30px';
+                
+                const exportButton = document.createElement('button');
+                exportButton.textContent = 'Export as PDF';
+                exportButton.onclick = async function() {
+                    try {
+                        const exportResponse = await fetch('/api/export/pdf', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: storyData.title || prompt
+                            })
+                        });
+                        
+                        if (!exportResponse.ok) {
+                            throw new Error('Failed to export manga');
+                        }
+                        
+                        const exportData = await exportResponse.json();
+                        console.log('Export data:', exportData);
+                        
+                        // Create download link
+                        alert('Your manga has been exported! Click OK to download.');
+                        window.location.href = exportData.pdf_path;
+                    } catch (error) {
+                        console.error('Error exporting manga:', error);
+                        alert('Failed to export manga: ' + error.message);
+                    }
+                };
+                
+                exportDiv.appendChild(exportButton);
+                outputDiv.appendChild(exportDiv);
+                
+            } catch (error) {
+                console.error('Error generating manga:', error);
+                outputDiv.innerHTML = `
+                    <div style="background: rgba(255,0,0,0.3); padding: 20px; border-radius: 10px; text-align: center;">
+                        <h3>Error</h3>
+                        <p>${error.message || 'Failed to generate manga. Please try again.'}</p>
+                    </div>
+                `;
+            } finally {
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

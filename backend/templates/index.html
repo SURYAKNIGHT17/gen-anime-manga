@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manga Creator API</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .endpoint {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .method {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manga Creator API</h1>
+    <p>Welcome to the Manga Creator API. This API allows you to generate manga stories and panels based on your prompts.</p>
+    
+    <h2>Endpoints</h2>
+    
+    <div class="endpoint">
+        <h3><span class="method">POST</span> /api/story/generate</h3>
+        <p>Generate a story based on a prompt and characters.</p>
+        <p><strong>Request Body:</strong></p>
+        <code>
+        {
+            "prompt": "A hero's journey in a cyberpunk world",
+            "characters": ["Cyber ninja", "AI companion"]
+        }
+        </code>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method">POST</span> /api/generate/panel</h3>
+        <p>Generate a manga panel based on a scene description.</p>
+        <p><strong>Request Body:</strong></p>
+        <code>
+        {
+            "scene": "A cyber ninja fighting robots in a neon-lit alley",
+            "characters": ["Cyber ninja", "Robots"],
+            "style": "manga"
+        }
+        </code>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method">POST</span> /api/export/pdf</h3>
+        <p>Export manga as PDF.</p>
+        <p><strong>Request Body:</strong></p>
+        <code>
+        {
+            "panels": [
+                {
+                    "path": "path/to/panel1.png",
+                    "dialogue": [
+                        {"character": "Character 1", "text": "Dialogue text"}
+                    ]
+                }
+            ],
+            "title": "My Manga"
+        }
+        </code>
+    </div>
+    
+    <div class="endpoint">
+        <h3><span class="method">POST</span> /api/export/cbz</h3>
+        <p>Export manga as CBZ.</p>
+        <p><strong>Request Body:</strong></p>
+        <code>
+        {
+            "panels": [
+                {"path": "path/to/panel1.png"}
+            ],
+            "title": "My Manga"
+        }
+        </code>
+    </div>
+    
+    <footer>
+        <p>For more information, check the <a href="https://github.com/yourusername/manga-creator">GitHub repository</a>.</p>
+    </footer>
+</body>
+</html>
