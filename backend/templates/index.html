@@ -3,106 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manga Creator API</title>
+    <title>Anime Manga Creator</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             color: #333;
         }
-        h1 {
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        .endpoint {
-            background-color: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 15px;
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #4a5568;
             margin-bottom: 20px;
-            border-radius: 0 4px 4px 0;
+            font-size: 1.5rem;
         }
-        code {
-            background-color: #eee;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
+
+        .form-group {
+            margin-bottom: 20px;
         }
-        .method {
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .results h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+
+        .story-result {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .story-title {
+            font-size: 1.3rem;
             font-weight: bold;
-            color: #e74c3c;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .story-summary {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .story-scenes {
+            margin-top: 15px;
+        }
+
+        .scene {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .scene-title {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Manga Creator API</h1>
-    <p>Welcome to the Manga Creator API. This API allows you to generate manga stories and panels based on your prompts.</p>
-    
-    <h2>Endpoints</h2>
-    
-    <div class="endpoint">
-        <h3><span class="method">POST</span> /api/story/generate</h3>
-        <p>Generate a story based on a prompt and characters.</p>
-        <p><strong>Request Body:</strong></p>
-        <code>
-        {
-            "prompt": "A hero's journey in a cyberpunk world",
-            "characters": ["Cyber ninja", "AI companion"]
-        }
-        </code>
+    <div class="container">
+        <div class="header">
+            <h1>🎌 Anime Manga Creator</h1>
+            <p>Create amazing manga stories and panels with AI-powered generation</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Story Generation Card -->
+            <div class="card">
+                <h2>📖 Generate Story</h2>
+                <form id="storyForm">
+                    <div class="form-group">
+                        <label for="prompt">Story Prompt:</label>
+                        <textarea id="prompt" placeholder="Describe your manga story idea..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="characters">Characters (comma-separated):</label>
+                        <input type="text" id="characters" placeholder="Hero, Villain, Sidekick..." required>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="unhinged">
+                        <label for="unhinged">Unhinged Mode (More Creative)</label>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="generateStoryBtn">Generate Story</button>
+                </form>
+            </div>
+
+            <!-- Panel Generation Card -->
+            <div class="card">
+                <h2>🎨 Generate Panel</h2>
+                <form id="panelForm">
+                    <div class="form-group">
+                        <label for="scene">Scene Description:</label>
+                        <textarea id="scene" placeholder="Describe the scene for the manga panel..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="panelCharacters">Characters in Scene:</label>
+                        <input type="text" id="panelCharacters" placeholder="Character names..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="style">Art Style:</label>
+                        <select id="style" required>
+                            <option value="manga">Manga</option>
+                            <option value="anime">Anime</option>
+                            <option value="realistic">Realistic</option>
+                            <option value="chibi">Chibi</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="generatePanelBtn">Generate Panel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results" id="results" style="display: none;">
+            <h3>Results</h3>
+            <div id="resultContent"></div>
+        </div>
     </div>
-    
-    <div class="endpoint">
-        <h3><span class="method">POST</span> /api/generate/panel</h3>
-        <p>Generate a manga panel based on a scene description.</p>
-        <p><strong>Request Body:</strong></p>
-        <code>
-        {
-            "scene": "A cyber ninja fighting robots in a neon-lit alley",
-            "characters": ["Cyber ninja", "Robots"],
-            "style": "manga"
-        }
-        </code>
-    </div>
-    
-    <div class="endpoint">
-        <h3><span class="method">POST</span> /api/export/pdf</h3>
-        <p>Export manga as PDF.</p>
-        <p><strong>Request Body:</strong></p>
-        <code>
-        {
-            "panels": [
-                {
-                    "path": "path/to/panel1.png",
-                    "dialogue": [
-                        {"character": "Character 1", "text": "Dialogue text"}
-                    ]
+
+    <script>
+        // Story Generation Form Handler
+        document.getElementById('storyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const prompt = document.getElementById('prompt').value;
+            const characters = document.getElementById('characters').value.split(',').map(c => c.trim());
+            const unhinged = document.getElementById('unhinged').checked;
+            
+            const btn = document.getElementById('generateStoryBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            
+            showResults('Generating your manga story...');
+            
+            try {
+                const response = await fetch('/api/story/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt, characters, unhinged })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayStoryResult(data);
+                } else {
+                    showError(data.error || 'Failed to generate story');
                 }
-            ],
-            "title": "My Manga"
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Story';
+            }
+        });
+
+        // Panel Generation Form Handler
+        document.getElementById('panelForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const scene = document.getElementById('scene').value;
+            const characters = document.getElementById('panelCharacters').value.split(',').map(c => c.trim());
+            const style = document.getElementById('style').value;
+            
+            const btn = document.getElementById('generatePanelBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            
+            showResults('Generating your manga panel...');
+            
+            try {
+                const response = await fetch('/api/generate/panel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ scene, characters, style })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayPanelResult(data);
+                } else {
+                    showError(data.error || 'Failed to generate panel');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Panel';
+            }
+        });
+
+        function showResults(message) {
+            const results = document.getElementById('results');
+            const content = document.getElementById('resultContent');
+            
+            results.style.display = 'block';
+            content.innerHTML = `<div class="loading">${message}</div>`;
+            
+            results.scrollIntoView({ behavior: 'smooth' });
         }
-        </code>
-    </div>
-    
-    <div class="endpoint">
-        <h3><span class="method">POST</span> /api/export/cbz</h3>
-        <p>Export manga as CBZ.</p>
-        <p><strong>Request Body:</strong></p>
-        <code>
-        {
-            "panels": [
-                {"path": "path/to/panel1.png"}
-            ],
-            "title": "My Manga"
+
+        function showError(message) {
+            const content = document.getElementById('resultContent');
+            content.innerHTML = `<div class="error">❌ ${message}</div>`;
         }
-        </code>
-    </div>
-    
-    <footer>
-        <p>For more information, check the <a href="https://github.com/yourusername/manga-creator">GitHub repository</a>.</p>
-    </footer>
+
+        function displayStoryResult(data) {
+            const content = document.getElementById('resultContent');
+            
+            let scenesHtml = '';
+            if (data.scenes && data.scenes.length > 0) {
+                scenesHtml = `
+                    <div class="story-scenes">
+                        <h4>Scenes:</h4>
+                        ${data.scenes.map((scene, index) => `
+                            <div class="scene">
+                                <div class="scene-title">Scene ${index + 1}: ${scene.title || 'Untitled'}</div>
+                                <div>${scene.description || scene.content || scene}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = `
+                <div class="story-result">
+                    <div class="story-title">${data.title || 'Generated Story'}</div>
+                    <div class="story-summary">${data.summary || data.content || 'Story generated successfully!'}</div>
+                    ${scenesHtml}
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        <strong>Genre:</strong> ${data.genre || 'Unknown'} | 
+                        <strong>Themes:</strong> ${data.themes ? data.themes.join(', ') : 'Various'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayPanelResult(data) {
+            const content = document.getElementById('resultContent');
+            
+            if (data.image_path) {
+                content.innerHTML = `
+                    <div class="story-result">
+                        <h4>Generated Panel:</h4>
+                        <img src="${data.image_path}" alt="Generated manga panel" style="max-width: 100%; border-radius: 10px; margin: 10px 0;">
+                        <div><strong>Scene:</strong> ${data.scene || 'Panel generated successfully!'}</div>
+                        <div><strong>Style:</strong> ${data.style || 'manga'}</div>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="story-result">
+                        <h4>Panel Generated!</h4>
+                        <div>${data.message || 'Panel generated successfully!'}</div>
+                        <div><strong>Scene:</strong> ${data.scene || ''}</div>
+                        <div><strong>Style:</strong> ${data.style || 'manga'}</div>
+                    </div>
+                `;
+            }
+        }
+    </script>
 </body>
 </html>
