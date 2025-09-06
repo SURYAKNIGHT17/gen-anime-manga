@@ -1,10 +1,74 @@
 import random
-from typing import List, Dict
+import logging
+from typing import List, Dict, Optional
+from datetime import datetime
 from openai_generator import OpenAIGenerator
+from services.nlp_engine import generate_story, StoryAnalyzer, extract_keywords, analyze_sentiment
 
-def generate_manga_story(prompt: str = "A mysterious adventure", characters: List[str] = None, unhinged: bool = False) -> Dict:
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class EnhancedStoryGenerator:
     """
-    Generate a manga story with 10-15 scenes.
+    Enhanced story generator with multiple generation modes and better narrative structure.
+    """
+    
+    def __init__(self):
+        self.analyzer = StoryAnalyzer()
+        self.openai_generator = None
+        
+        # Initialize OpenAI generator if available
+        try:
+            self.openai_generator = OpenAIGenerator()
+        except Exception as e:
+            logger.warning(f"OpenAI generator not available: {e}")
+    
+    def generate_story_metadata(self, prompt: str, scenes: List[Dict], characters: List[str]) -> Dict:
+        """
+        Generate comprehensive metadata for the story.
+        
+        Args:
+            prompt (str): Original story prompt
+            scenes (list): Generated scenes
+            characters (list): Character list
+            
+        Returns:
+            dict: Story metadata
+        """
+        # Analyze prompt for metadata
+        analysis = self.analyzer.analyze_prompt(prompt)
+        
+        # Calculate story statistics
+        total_dialogue = sum(len(scene.get('dialogue', [])) for scene in scenes)
+        avg_dialogue_per_scene = total_dialogue / len(scenes) if scenes else 0
+        
+        # Estimate reading time (assuming 1 minute per scene)
+        estimated_reading_time = len(scenes) * 1.5
+        
+        # Extract themes from prompt
+        keywords = extract_keywords(prompt)
+        sentiment = analyze_sentiment(prompt)
+        
+        return {
+            'generation_method': 'enhanced_nlp',
+            'scene_count': len(scenes),
+            'character_count': len(characters),
+            'total_dialogue_lines': total_dialogue,
+            'avg_dialogue_per_scene': round(avg_dialogue_per_scene, 1),
+            'estimated_reading_time_minutes': round(estimated_reading_time, 1),
+            'estimated_page_count': f"{len(scenes)}-{len(scenes) * 2}",
+            'primary_genre': analysis.get('primary_genre', 'drama'),
+            'detected_themes': keywords[:5],
+            'story_sentiment': sentiment,
+            'complexity_score': min(10, len(characters) * 2 + len(scenes) // 3),
+            'generation_timestamp': datetime.now().isoformat(),
+            'prompt_analysis': analysis
+        }
+
+def generate_manga_story(prompt: str = "A mysterious adventure", characters: Optional[List[str]] = None, unhinged: bool = False) -> Dict:
+    """
+    Generate an enhanced manga story with improved narrative structure.
     
     Args:
         prompt (str): The story prompt
@@ -12,8 +76,10 @@ def generate_manga_story(prompt: str = "A mysterious adventure", characters: Lis
         unhinged (bool): Whether to generate unhinged, uncensored content
         
     Returns:
-        dict: A dictionary containing title, summary, and scenes
+        dict: A dictionary containing title, summary, scenes, and metadata
     """
+    logger.info(f"Generating {'unhinged' if unhinged else 'regular'} manga story for prompt: {prompt[:50]}...")
+    
     if characters is None:
         characters = ['Protagonist', 'Antagonist']
     
@@ -21,19 +87,80 @@ def generate_manga_story(prompt: str = "A mysterious adventure", characters: Lis
     if isinstance(characters, str):
         characters = [c.strip() for c in characters.split(',')]
     
-    # Use OpenAI generator for unhinged content
+    # Initialize enhanced generator
+    generator = EnhancedStoryGenerator()
+    
+    # Use OpenAI generator for unhinged content if available
     if unhinged:
         try:
-            openai_gen = OpenAIGenerator()
-            return openai_gen.generate_unhinged_story(prompt, characters)
+            if generator.openai_generator:
+                logger.info("Using OpenAI generator for unhinged content")
+                return generator.openai_generator.generate_unhinged_story(prompt, characters)
+            else:
+                logger.info("OpenAI not available, using enhanced local generation")
+                return _generate_enhanced_local_story(prompt, characters, unhinged=True, generator=generator)
         except Exception as e:
-            print(f"Error with OpenAI generator: {e}")
+            logger.error(f"Error with OpenAI generator: {e}")
             # Fall back to enhanced local generation
-            return _generate_enhanced_local_story(prompt, characters, unhinged=True)
+            return _generate_enhanced_local_story(prompt, characters, unhinged=True, generator=generator)
     else:
-        return _generate_enhanced_local_story(prompt, characters, unhinged=False)
+        # Use enhanced NLP engine for regular content
+        logger.info("Using enhanced NLP engine for regular content")
+        return _generate_enhanced_story_with_nlp(prompt, characters, generator)
 
-def _generate_enhanced_local_story(prompt: str, characters: List[str], unhinged: bool = False) -> Dict:
+def _generate_enhanced_story_with_nlp(prompt: str, characters: List[str], generator: EnhancedStoryGenerator) -> Dict:
+    """
+    Generate a story using the enhanced NLP engine.
+    
+    Args:
+        prompt (str): The story prompt
+        characters (list): List of character names
+        generator (EnhancedStoryGenerator): The story generator instance
+        
+    Returns:
+        dict: Enhanced story structure
+    """
+    # Use the enhanced NLP engine to generate scenes
+    scenes = generate_story(prompt, characters)
+    
+    # Analyze prompt for title generation
+    analysis = generator.analyzer.analyze_prompt(prompt)
+    genre = analysis.get('primary_genre', 'adventure')
+    themes = analysis.get('themes', [])
+    
+    # Generate dynamic title
+    title_templates = {
+        'action': ['Battle for', 'War of', 'Clash of', 'Fight for'],
+        'romance': ['Love in', 'Hearts of', 'Romance of', 'Passion in'],
+        'mystery': ['Mystery of', 'Secret of', 'Case of', 'Enigma of'],
+        'fantasy': ['Legend of', 'Chronicles of', 'Magic of', 'Realm of'],
+        'horror': ['Terror of', 'Nightmare of', 'Horror of', 'Fear of'],
+        'comedy': ['Comedy of', 'Adventures of', 'Misadventures of', 'Tales of'],
+        'drama': ['Story of', 'Life of', 'Journey of', 'Trials of'],
+        'sci-fi': ['Future of', 'Galaxy of', 'Technology of', 'Tomorrow of']
+    }
+    
+    title_prefix = random.choice(title_templates.get(genre, title_templates['drama']))
+    title_subject = themes[0] if themes else characters[0] if characters else 'Adventure'
+    title = f"{title_prefix} {title_subject.title()}"
+    
+    # Generate summary based on analysis
+    summary = f"A {genre} tale where {characters[0] if characters else 'our hero'} embarks on a journey involving {', '.join(themes[:3]) if themes else 'mystery and adventure'}. {prompt}"
+    
+    # Generate metadata
+    metadata = generator.generate_story_metadata(prompt, scenes, characters)
+    
+    return {
+        'title': title,
+        'summary': summary,
+        'genre': genre,
+        'themes': themes[:5],
+        'characters': characters,
+        'scenes': scenes,
+        'metadata': metadata
+    }
+
+def _generate_enhanced_local_story(prompt: str, characters: List[str], unhinged: bool = False, generator: Optional[EnhancedStoryGenerator] = None) -> Dict:
     """
     Generate a story using enhanced local methods.
     
@@ -227,10 +354,23 @@ def _generate_enhanced_local_story(prompt: str, characters: List[str], unhinged:
             "dialogue": dialogues
         })
     
+    # Generate metadata if generator is available
+    metadata = {}
+    if generator:
+        metadata = generator.generate_story_metadata(prompt, scenes, characters)
+    else:
+        metadata = {
+            'generation_method': 'local_enhanced',
+            'scene_count': len(scenes),
+            'character_count': len(characters),
+            'generation_timestamp': datetime.now().isoformat()
+        }
+    
     return {
         "title": title,
         "summary": summary,
-        "scenes": scenes
+        "scenes": scenes,
+        "metadata": metadata
     }
 
 # Test function

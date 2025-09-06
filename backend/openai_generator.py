@@ -2,7 +2,13 @@ import os
 import random
 import requests
 import json
+import logging
 from typing import List, Dict, Optional
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class OpenAIGenerator:
     """
@@ -12,20 +18,46 @@ class OpenAIGenerator:
     
     def __init__(self, api_key: Optional[str] = None):
         """
-        Initialize the OpenAI generator with an API key.
+        Initialize the OpenAI generator with enhanced error handling and logging.
         
         Args:
             api_key (str): OpenAI API key. If None, will try to get from environment variable.
         """
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not self.api_key:
-            print("Warning: No OpenAI API key provided. Using fallback generation methods.")
+            logger.warning("No OpenAI API key provided. Using fallback generation methods.")
+        else:
+            logger.info("OpenAI API key found. Enhanced generation available.")
         
         self.api_url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         } if self.api_key else {}
+        
+        # Enhanced story templates for different genres
+        self.story_templates = {
+            'action': {
+                'system_prompt': "You are an EXTREMELY unhinged action manga creator. Create intense, violent, adrenaline-fueled stories with brutal combat and shocking twists.",
+                'style_elements': ['explosive action', 'brutal combat', 'intense rivalries', 'shocking betrayals']
+            },
+            'horror': {
+                'system_prompt': "You are a master of psychological horror manga. Create disturbing, nightmare-inducing stories that break minds and reality.",
+                'style_elements': ['psychological terror', 'body horror', 'reality distortion', 'existential dread']
+            },
+            'thriller': {
+                'system_prompt': "You are a twisted thriller manga writer. Create suspenseful, mind-bending stories with dark secrets and moral corruption.",
+                'style_elements': ['psychological manipulation', 'dark secrets', 'moral corruption', 'twisted revelations']
+            },
+            'dark_comedy': {
+                'system_prompt': "You are a dark comedy manga creator. Create hilariously twisted stories that mock society while being completely unhinged.",
+                'style_elements': ['satirical violence', 'dark humor', 'social commentary', 'absurd situations']
+            }
+        }
+        
+        # API retry configuration
+        self.max_retries = 3
+        self.retry_delay = 1
     
     def generate_unhinged_story(self, prompt: str, characters: Optional[List[str]] = None, temperature: float = 1.2) -> Dict:
         """
@@ -102,23 +134,135 @@ class OpenAIGenerator:
         }
         
         try:
-            # Make the API request
-            response = requests.post(self.api_url, headers=self.headers, data=json.dumps(data), timeout=30)
-            response.raise_for_status()
+            # Make the API request with retry logic
+            story_json = self._make_api_request_with_retry(data)
             
-            # Parse the response
-            result = response.json()
-            story_json = json.loads(result["choices"][0]["message"]["content"])
-            
-            # Enhance the story with additional unhinged elements
-            story_json = self._enhance_story_chaos(story_json)
-            
-            return story_json
+            if story_json:
+                # Enhance the story with additional unhinged elements
+                story_json = self._enhance_story_chaos(story_json)
+                
+                # Add metadata
+                story_json['metadata'] = {
+                    'generation_method': 'openai_unhinged',
+                    'model': data['model'],
+                    'temperature': temperature,
+                    'scene_count': len(story_json.get('scenes', [])),
+                    'character_count': len(characters),
+                    'generation_timestamp': datetime.now().isoformat(),
+                    'prompt_length': len(prompt)
+                }
+                
+                logger.info(f"Successfully generated unhinged story with {len(story_json.get('scenes', []))} scenes")
+                return story_json
+            else:
+                logger.warning("API request failed, using fallback generation")
+                return self._generate_fallback_unhinged_story(prompt, characters)
             
         except Exception as e:
-            print(f"Error generating story with OpenAI API: {e}")
+            logger.error(f"Error generating story with OpenAI API: {e}")
             # Fallback to enhanced local generation
             return self._generate_fallback_unhinged_story(prompt, characters)
+    
+    def _make_api_request_with_retry(self, data: Dict) -> Optional[Dict]:
+        """
+        Make API request with retry logic and proper error handling.
+        
+        Args:
+            data (dict): Request payload
+            
+        Returns:
+            dict: Parsed story JSON or None if failed
+        """
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f"Making API request (attempt {attempt + 1}/{self.max_retries})")
+                response = requests.post(
+                    self.api_url, 
+                    headers=self.headers, 
+                    data=json.dumps(data), 
+                    timeout=45
+                )
+                response.raise_for_status()
+                
+                # Parse the response
+                result = response.json()
+                
+                if 'choices' not in result or not result['choices']:
+                    logger.error("Invalid API response: no choices found")
+                    continue
+                
+                content = result["choices"][0]["message"]["content"]
+                
+                try:
+                    story_json = json.loads(content)
+                    logger.info("Successfully parsed API response")
+                    return story_json
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing failed: {e}")
+                    # Try to extract JSON from the content
+                    return self._extract_json_from_content(content)
+                
+            except requests.exceptions.Timeout:
+                logger.warning(f"API request timeout (attempt {attempt + 1})")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API request failed (attempt {attempt + 1}): {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error during API request (attempt {attempt + 1}): {e}")
+            
+            if attempt < self.max_retries - 1:
+                import time
+                time.sleep(self.retry_delay * (attempt + 1))
+        
+        logger.error("All API request attempts failed")
+        return None
+    
+    def _extract_json_from_content(self, content: str) -> Optional[Dict]:
+        """
+        Try to extract JSON from content that might have extra text.
+        
+        Args:
+            content (str): Raw content from API
+            
+        Returns:
+            dict: Extracted JSON or None
+        """
+        try:
+            # Look for JSON-like content between braces
+            start = content.find('{')
+            end = content.rfind('}') + 1
+            
+            if start != -1 and end > start:
+                json_str = content[start:end]
+                return json.loads(json_str)
+        except Exception as e:
+            logger.error(f"Failed to extract JSON from content: {e}")
+        
+        return None
+    
+    def detect_story_genre(self, prompt: str) -> str:
+        """
+        Detect the story genre from the prompt for better template selection.
+        
+        Args:
+            prompt (str): Story prompt
+            
+        Returns:
+            str: Detected genre
+        """
+        prompt_lower = prompt.lower()
+        
+        genre_keywords = {
+            'horror': ['horror', 'scary', 'fear', 'nightmare', 'ghost', 'demon', 'evil', 'dark', 'death'],
+            'action': ['fight', 'battle', 'war', 'combat', 'conflict', 'chase', 'revenge', 'violence'],
+            'thriller': ['mystery', 'detective', 'crime', 'murder', 'investigation', 'conspiracy', 'secret'],
+            'dark_comedy': ['funny', 'comedy', 'humor', 'joke', 'satire', 'parody', 'absurd']
+        }
+        
+        for genre, keywords in genre_keywords.items():
+            if any(keyword in prompt_lower for keyword in keywords):
+                return genre
+        
+        return 'action'  # Default genre
     
     def _enhance_story_chaos(self, story: Dict) -> Dict:
         """
@@ -322,15 +466,42 @@ class OpenAIGenerator:
         }
         
         try:
-            response = requests.post(self.api_url, headers=self.headers, data=json.dumps(data), timeout=15)
+            logger.info("Generating panel description with OpenAI API")
+            response = requests.post(self.api_url, headers=self.headers, data=json.dumps(data), timeout=20)
             response.raise_for_status()
             
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            description = result["choices"][0]["message"]["content"]
+            
+            logger.info("Successfully generated panel description")
+            return description
             
         except Exception as e:
-            print(f"Error generating panel description: {e}")
-            return f"A dark, twisted manga panel showing: {scene_description}"
+            logger.error(f"Error generating panel description: {e}")
+            return self._generate_fallback_panel_description(scene_description, dialogue, style)
+    
+    def _generate_fallback_panel_description(self, scene_description: str, dialogue: List[Dict], style: str) -> str:
+        """
+        Generate a fallback panel description when API is unavailable.
+        
+        Args:
+            scene_description (str): Scene description
+            dialogue (list): Dialogue list
+            style (str): Panel style
+            
+        Returns:
+            str: Fallback panel description
+        """
+        character_count = len(set(d['character'] for d in dialogue if 'character' in d))
+        
+        style_templates = {
+            'dark': f"A dark, twisted manga panel with heavy shadows and ominous atmosphere showing: {scene_description}. {character_count} characters with intense, disturbing expressions.",
+            'action': f"A dynamic action panel with motion lines and impact effects showing: {scene_description}. {character_count} characters in dramatic poses.",
+            'horror': f"A horrifying panel with distorted perspectives and nightmare imagery showing: {scene_description}. {character_count} characters with terrified expressions.",
+            'comedy': f"A darkly comedic panel with exaggerated expressions showing: {scene_description}. {character_count} characters in absurd situations."
+        }
+        
+        return style_templates.get(style, style_templates['dark'])
 
 
 # Example usage and testing
