@@ -50,7 +50,7 @@ def generate_story():
 
 @app.route('/')
 def index():
-    return jsonify({"message": "Anime Manga Creator API is running"})
+    return render_template('index.html')
 
 @app.route('/anime')
 def anime_page():
