@@ -210,8 +210,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎌 Anime Manga Creator</h1>
-            <p>Create amazing manga stories and panels with AI-powered generation</p>
+            <h1>🎨 Anime Manga Creator</h1>
+            <p>Create amazing manga stories and panels with AI</p>
+            <a href="/results" style="display: inline-block; background: rgba(255, 255, 255, 0.2); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; margin-top: 15px; transition: all 0.3s ease; backdrop-filter: blur(10px);">📁 View Results Gallery</a>
         </div>
 
         <div class="main-content">
@@ -400,13 +401,18 @@
         function displayPanelResult(data) {
             const content = document.getElementById('resultContent');
             
-            if (data.image_path) {
+            if (data.panel_path) {
                 content.innerHTML = `
                     <div class="story-result">
-                        <h4>Generated Panel:</h4>
-                        <img src="${data.image_path}" alt="Generated manga panel" style="max-width: 100%; border-radius: 10px; margin: 10px 0;">
-                        <div><strong>Scene:</strong> ${data.scene || 'Panel generated successfully!'}</div>
-                        <div><strong>Style:</strong> ${data.style || 'manga'}</div>
+                        <h4>✅ Panel Generated Successfully!</h4>
+                        <img src="${data.panel_path}" alt="Generated manga panel" style="max-width: 100%; border-radius: 10px; margin: 15px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                        <div style="margin: 15px 0;">
+                            <a href="${data.panel_path}" download style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; margin-right: 10px;">📥 Download Panel</a>
+                            <a href="/results" style="display: inline-block; background: rgba(102, 126, 234, 0.1); color: #667eea; padding: 10px 20px; border-radius: 25px; text-decoration: none; border: 2px solid #667eea;">📁 View All Results</a>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                            Panel saved and ready for download!
+                        </div>
                     </div>
                 `;
             } else {
@@ -414,8 +420,9 @@
                     <div class="story-result">
                         <h4>Panel Generated!</h4>
                         <div>${data.message || 'Panel generated successfully!'}</div>
-                        <div><strong>Scene:</strong> ${data.scene || ''}</div>
-                        <div><strong>Style:</strong> ${data.style || 'manga'}</div>
+                        <div style="margin: 15px 0;">
+                            <a href="/results" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none;">📁 View Results</a>
+                        </div>
                     </div>
                 `;
             }

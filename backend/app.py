@@ -168,6 +168,52 @@ def export_pdf():
 def serve_output(filename):
     return send_from_directory('outputs', filename)
 
+@app.route('/results')
+def results_page():
+    return render_template('results.html')
+
+@app.route('/api/panels/list', methods=['GET'])
+def list_panels():
+    """List all generated panels"""
+    try:
+        import glob
+        import os
+        
+        # Get all panel files from outputs directory
+        panel_files = glob.glob(os.path.join('outputs', 'panel_*.png'))
+        panel_files.extend(glob.glob(os.path.join('outputs', 'error_panel_*.png')))
+        
+        panels = []
+        for file_path in panel_files:
+            filename = os.path.basename(file_path)
+            # Extract timestamp from filename
+            try:
+                timestamp_str = filename.split('_')[-1].replace('.png', '')
+                timestamp = int(timestamp_str)
+            except:
+                timestamp = os.path.getctime(file_path)
+            
+            panels.append({
+                'filename': filename,
+                'created': timestamp,
+                'path': f'/outputs/{filename}'
+            })
+        
+        # Sort by creation time (newest first)
+        panels.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'panels': panels,
+            'count': len(panels)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'panels': []
+        }), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(e):
